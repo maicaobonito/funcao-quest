@@ -160,6 +160,7 @@ body{display:flex;align-items:stretch;font-family:'Press Start 2P','Courier New'
 .fx-flash{position:absolute;inset:0;z-index:25;pointer-events:none;opacity:0;}
 .fx-flash.ok {background:radial-gradient(circle,rgba(0,255,120,.45),transparent 72%);animation:fx-flash-pop .5s ease;}
 .fx-flash.err{background:radial-gradient(circle,rgba(255,45,45,.5),transparent 72%);animation:fx-flash-pop .5s ease;}
+.fx-flash.shield{background:radial-gradient(circle,rgba(80,170,255,.45),transparent 72%);animation:fx-flash-pop .5s ease;}
 @keyframes fx-flash-pop{0%{opacity:0}18%{opacity:1}100%{opacity:0}}
 
 /* Tremor de tela no erro */
@@ -170,6 +171,18 @@ body{display:flex;align-items:stretch;font-family:'Press Start 2P','Courier New'
 .coin-float{position:absolute;left:50%;top:42%;transform:translateX(-50%);color:#ffd24d;font-size:clamp(13px,2.2vw,22px);
   text-shadow:0 0 12px rgba(255,200,60,.9);pointer-events:none;z-index:40;animation:coin-rise 1.1s ease forwards;}
 @keyframes coin-rise{0%{opacity:0;transform:translate(-50%,12px) scale(.6)}22%{opacity:1}100%{opacity:0;transform:translate(-50%,-64px) scale(1.25)}}
+.shield-float{position:absolute;left:50%;top:42%;transform:translateX(-50%);color:#7ec8ff;font-size:clamp(15px,2.6vw,26px);
+  text-shadow:0 0 14px rgba(110,200,255,.95);pointer-events:none;z-index:40;animation:coin-rise 1.1s ease forwards;}
+
+/* ── VIDAS + ESCUDOS ── */
+.bar-left{display:flex;flex-direction:column;gap:5px;align-items:flex-start;min-width:0;}
+.lives{display:flex;align-items:center;gap:3px;font-size:clamp(8px,1.3vw,13px);line-height:1;}
+.lives.bump{animation:coin-bump .4s ease;}
+.shieldtag{color:#7ec8ff;font-size:clamp(6px,.95vw,8px);text-shadow:0 0 6px rgba(110,200,255,.75);margin-left:5px;letter-spacing:1px;}
+/* Feedback de erro "blindado" pelo escudo: azul (protetor) em vez de vermelho */
+.fb.err.shielded{background:linear-gradient(180deg,rgba(20,70,130,.98),rgba(8,34,80,.98));border-color:#6fc0ff;box-shadow:0 6px 26px rgba(60,140,255,.4);}
+.fb.err.shielded .fb-head{text-shadow:0 0 10px rgba(120,200,255,.8);}
+.fb.err.shielded .fb-correct{border-color:#9fd8ff;color:#cdeeff;}
 
 /* Destaque de resposta nos botões das fases */
 .btn.ans-ok {background:linear-gradient(180deg,#44cc66,#1d7a3c)!important;border-color:#9fffc0!important;color:#fff!important;box-shadow:0 0 20px rgba(0,238,119,.65),0 4px 0 #0e4422!important;transform:scale(1.05);}
@@ -344,6 +357,9 @@ body{display:flex;align-items:stretch;font-family:'Press Start 2P','Courier New'
         <li>Cada fase ensina um tipo de função matemática</li>
         <li>Leia a <span style="color:#f0c840">dica</span> em itálico antes de responder</li>
         <li>Respostas erradas mostram a explicação completa</li>
+        <li>Nas fases você tem <span style="color:#ff6b6b">❤️ 5 vidas</span> — cada erro custa 1 vida</li>
+        <li><span style="color:#7ec8ff">🛡️ 3 acertos seguidos</span> = 1 escudo, que absorve um erro sem perder vida</li>
+        <li>Se as vidas <span style="color:#ff6b6b">acabarem</span>, o Caos vence e o jogo termina!</li>
         <li>Cada acerto rende <span style="color:#ffd24d">🪙 10 moedas</span></li>
         <li>No Quiz Final, gaste <span style="color:#ffd24d">🪙 20</span> para <span style="color:#f0c840">comprar uma dica</span> da questão</li>
         <li>Quiz Final: <span style="color:#f0c840">10 questões sorteadas</span> aleatoriamente</li>
@@ -367,7 +383,10 @@ body{display:flex;align-items:stretch;font-family:'Press Start 2P','Courier New'
   <div class="screen" id="s-phase">
     <div id="phase-fb" class="fb"></div>
     <div class="phase-bar">
-      <div class="phase-lbl" id="phase-lbl">FASE 1</div>
+      <div class="bar-left">
+        <div class="phase-lbl" id="phase-lbl">FASE 1</div>
+        <div class="lives" id="phase-lives"></div>
+      </div>
       <div class="prog-wrap">
         <span class="coins" id="phase-coins">🪙 0</span>
         <span class="prog-lbl">PROGRESSO</span>
@@ -515,6 +534,24 @@ body{display:flex;align-items:stretch;font-family:'Press Start 2P','Courier New'
       </div>
     </div>
   </div>
+
+  <!-- GAME OVER (vidas esgotadas nas fases) -->
+  <div class="screen" id="s-gameover">
+    <div class="end-panel-l">
+      <div class="end-title-l">💀 O CAOS DOMINOU MATHLAND</div>
+      <div class="lose-chars">
+        <img data-img="2" style="width:clamp(40px,5vw,60px);image-rendering:pixelated;filter:grayscale(90%) brightness(.4);" alt="">
+        <div style="color:#ff4444;font-size:clamp(14px,2.5vw,22px);">☠</div>
+        <img data-img="3" style="width:clamp(44px,5.6vw,66px);image-rendering:pixelated;filter:hue-rotate(330deg) brightness(1.3);animation:bob 1.5s ease-in-out infinite;" alt="">
+      </div>
+      <div class="lose-speech" id="go-narr"></div>
+      <div class="end-msg-l"   id="go-msg"></div>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+        <button class="btn btn-red"  onclick="startGame()">🔄 RECOMEÇAR</button>
+        <button class="btn btn-gold" onclick="Audio8bit.sfx.click();goTo('s-title')">↩ INÍCIO</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -632,8 +669,11 @@ const POOL=[
 ];
 
 // Economia de moedas + loja de dica
-var COIN_PER_HIT=10;   // moedas ganhas por acerto
-var HINT_COST=20;      // custo da dica no quiz
+var COIN_PER_HIT=10;       // moedas ganhas por acerto
+var HINT_COST=20;          // custo da dica no quiz
+var MAX_LIVES=5;           // vidas nas fases
+var STREAK_FOR_SHIELD=3;   // acertos seguidos para ganhar 1 escudo
+var MAX_SHIELDS=3;         // teto de escudos acumulados
 
 
 var Audio8bit=(function(){
@@ -667,7 +707,8 @@ var Audio8bit=(function(){
     lose:  function(){[440,415,392,349,330,294].forEach(function(f,i){beep(f,.20,'square',.2,i*.17);}); },
     coin:  function(){beep(988,.05,'square',.16,0);beep(1319,.12,'square',.16,.06);},
     buy:   function(){beep(660,.06,'square',.16,0);beep(880,.06,'square',.16,.07);beep(1175,.14,'square',.16,.14);},
-    nope:  function(){beep(200,.12,'square',.18,0);beep(160,.16,'square',.18,.10);}
+    nope:  function(){beep(200,.12,'square',.18,0);beep(160,.16,'square',.18,.10);},
+    shield:function(){beep(523,.05,'square',.16,0);beep(1047,.16,'triangle',.18,.05);}
   };
   var MEL=[[587,.25],[523,.25],[494,.25],[440,.25],[392,.25],[440,.25],[494,.25],[440,.25],[392,.25],[349,.25],[330,.25],[294,.5],[330,.25],[349,.25],[392,.25],[440,.25],[494,.25],[523,.25],[587,.5],[523,.25],[494,.25],[440,.5],[494,.25],[440,.25],[392,.25],[349,.25],[330,.25],[294,.25],[330,.25],[392,.25],[440,.25],[392,.25],[349,.25],[330,.25],[294,1.0]];
   var BASS=[[147,.5],[147,.5],[196,.5],[196,.5],[147,.5],[147,.5],[110,.5],[110,.5],[147,.5],[165,.5],[196,.5],[196,.5],[196,.5],[147,.5],[147,.5],[147,.5]];
@@ -707,7 +748,8 @@ var Audio8bit=(function(){
 })();
 
 
-var G={phase:0,qIdx:0,dialog:0,dPhase:'intro',phaseScore:0,answered:false,quizQs:[],quizIdx:0,quizScore:0,coins:0,hintUsed:false};
+var G={phase:0,qIdx:0,dialog:0,dPhase:'intro',phaseScore:0,answered:false,quizQs:[],quizIdx:0,quizScore:0,coins:0,hintUsed:false,lives:MAX_LIVES,shields:0,streak:0};
+var narrTimer=null;
 var AV={hero:IMG[2],villain:IMG[3]};
 var DEFEAT_MSG=['"Hahaha! Mathland é MINHA para sempre, Aldric!"','"Você falhou, guardião! Só o glorioso CAOS reina agora!"','"Injetora? Bijetora? Palavras vazias para um guerreiro tão fraco!"'];
 
@@ -729,6 +771,15 @@ function awardCoins(n){
     var el=document.getElementById(id);
     if(el){el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump');}
   });
+}
+
+// ── VIDAS + ESCUDOS ──
+function updateLives(){
+  var el=document.getElementById('phase-lives');if(!el)return;
+  var h='';
+  for(var i=0;i<MAX_LIVES;i++) h+=(i<G.lives?'❤️':'🤍');
+  el.innerHTML='<span>'+h+'</span>'+(G.shields>0?'<span class="shieldtag">🛡️×'+G.shields+'</span>':'');
+  el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump');
 }
 
 // ── LOJA DE DICA (Quiz Final) ──
@@ -762,10 +813,14 @@ function applyTheme(i){
 }
 
 function fb(el,type,msg){el.className='fb '+type;void el.offsetWidth;el.className='fb '+type+' anim';el.textContent=(type==='ok'?'✅ ':'❌ ')+msg;}
-// Feedback de erro destacado: cabeçalho grande + resposta correta em evidência + explicação
-function fbErr(el,q){
-  el.className='fb err';void el.offsetWidth;el.className='fb err anim';
-  el.innerHTML='<span class="fb-head">❌ ERROU!</span><span class="fb-correct">Correto: '+q.opts[q.ok]+'</span><br>'+q.exp;
+// Feedback de erro destacado: cabeçalho grande + resposta correta em evidência + explicação.
+// shielded=true → erro absorvido por um escudo (banner azul, nenhuma vida perdida).
+function fbErr(el,q,shielded){
+  el.className='fb err'+(shielded?' shielded':'');void el.offsetWidth;
+  el.className='fb err'+(shielded?' shielded':'')+' anim';
+  var head=shielded?'<span class="fb-head">🛡️ ESCUDO ATIVADO — nenhuma vida perdida!</span>'
+                   :'<span class="fb-head">❌ ERROU!</span>';
+  el.innerHTML=head+'<span class="fb-correct">Correto: '+q.opts[q.ok]+'</span><br>'+q.exp;
 }
 
 // ── EFEITOS DE AÇÃO ──
@@ -781,25 +836,27 @@ function shakeScreen(){
   g.classList.remove('shake');void g.offsetWidth;g.classList.add('shake');
   setTimeout(function(){g.classList.remove('shake');},470);
 }
-function floatCoin(sceneSel){
+function floatText(sceneSel,text,cls){
   var scene=document.querySelector(sceneSel);if(!scene)return;
-  var s=document.createElement('span');s.className='coin-float';s.textContent='+'+COIN_PER_HIT+' 🪙';
+  var s=document.createElement('span');s.className=cls;s.textContent=text;
   scene.appendChild(s);setTimeout(function(){s.remove();},1150);
 }
-// reage à resposta no cenário ativo (fase ou quiz)
-function reactToAnswer(sceneSel,correct){
+// reage à resposta no cenário ativo. mode: 'ok' | 'wrong' | 'shield'
+function reactToAnswer(sceneSel,mode){
   var scene=document.querySelector(sceneSel);if(!scene)return;
   var hero=scene.querySelector('.scene-char:not(.villain)');
   var vil =scene.querySelector('.scene-char.villain');
-  if(correct){ reAnim(hero,'fx-attack'); reAnim(vil,'fx-hit'); flashScreen('ok'); floatCoin(sceneSel); }
-  else       { reAnim(vil,'fx-cheer');  reAnim(hero,'fx-hurt'); flashScreen('err'); shakeScreen(); }
+  if(mode==='ok'){ reAnim(hero,'fx-attack'); reAnim(vil,'fx-hit'); flashScreen('ok'); floatText(sceneSel,'+'+COIN_PER_HIT+' 🪙','coin-float'); }
+  else if(mode==='shield'){ reAnim(hero,'fx-attack'); flashScreen('shield'); floatText(sceneSel,'🛡️','shield-float'); shakeScreen(); }
+  else { reAnim(vil,'fx-cheer'); reAnim(hero,'fx-hurt'); flashScreen('err'); shakeScreen(); }
 }
 function clearFb(el){el.className='fb';el.textContent='';}
 
 function startGame(){
   Audio8bit.sfx.click();
-  G={phase:0,qIdx:0,dialog:0,dPhase:'intro',phaseScore:0,answered:false,quizQs:[],quizIdx:0,quizScore:0,coins:0,hintUsed:false};
-  updateCoins();
+  if(narrTimer){clearInterval(narrTimer);narrTimer=null;}
+  G={phase:0,qIdx:0,dialog:0,dPhase:'intro',phaseScore:0,answered:false,quizQs:[],quizIdx:0,quizScore:0,coins:0,hintUsed:false,lives:MAX_LIVES,shields:0,streak:0};
+  updateCoins();updateLives();
   openIntro(0);
 }
 
@@ -881,6 +938,7 @@ function nextDlg(){
 
 function loadQ(){
   var ph=PHASES[G.phase],q=ph.qs[G.qIdx];G.answered=false;
+  updateLives();updateCoins();
   document.getElementById('phase-lbl').textContent=ph.label;
   document.getElementById('q-concept').textContent=ph.concept;
   document.getElementById('q-hint').textContent=ph.hint;
@@ -913,14 +971,26 @@ function answerQ(isCorrect,btn){
     if(b.dataset.correct==='1')b.classList.add('ans-ok');
   });
   if(isCorrect){
-    G.phaseScore++;Audio8bit.sfx.ok();fb(el,'ok',q.exp+'   +'+COIN_PER_HIT+' 🪙');
-    awardCoins(COIN_PER_HIT);reactToAnswer('#s-phase .phase-scene',true);
+    G.phaseScore++;G.streak++;
+    // Bônus de sequência: a cada 3 acertos seguidos, ganha 1 escudo (até o teto)
+    var gainedShield=(G.streak%STREAK_FOR_SHIELD===0 && G.shields<MAX_SHIELDS);
+    if(gainedShield)G.shields++;
+    Audio8bit.sfx.ok();
+    var msg=q.exp+'   +'+COIN_PER_HIT+' 🪙'+(gainedShield?'   🛡️ +1 ESCUDO! ('+G.streak+' seguidas)':'');
+    fb(el,'ok',msg);awardCoins(COIN_PER_HIT);updateLives();
+    reactToAnswer('#s-phase .phase-scene','ok');
   }else{
+    G.streak=0;
+    var usedShield=G.shields>0;
+    if(usedShield)G.shields--; else G.lives--;
     if(btn)btn.classList.add('ans-err');
-    Audio8bit.sfx.fail();fbErr(el,q);reactToAnswer('#s-phase .phase-scene',false);
+    (usedShield?Audio8bit.sfx.shield:Audio8bit.sfx.fail)();
+    fbErr(el,q,usedShield);updateLives();
+    reactToAnswer('#s-phase .phase-scene',usedShield?'shield':'wrong');
   }
   // Acerto: avança rápido (mais dinâmico). Erro: mais tempo para ler a correção.
   setTimeout(function(){
+    if(!isCorrect && G.lives<=0){ gameOver(); return; }
     G.answered=false;G.qIdx++;
     if(G.qIdx<PHASES[G.phase].qs.length){loadQ();}
     else{G.dPhase='outro';G.dialog=0;showDlg(PHASES[G.phase].outro[0]);goTo('s-dlg');}
@@ -959,14 +1029,14 @@ function answerQuiz(isCorrect,btn,q){
   var el=document.getElementById('quiz-fb');
   if(isCorrect){
     btn.classList.add('ok');G.quizScore++;Audio8bit.sfx.ok();fb(el,'ok',q.exp+'   +'+COIN_PER_HIT+' 🪙');
-    awardCoins(COIN_PER_HIT);reactToAnswer('#s-quiz .quiz-scene',true);
+    awardCoins(COIN_PER_HIT);reactToAnswer('#s-quiz .quiz-scene','ok');
   }else{
     btn.classList.add('err');Audio8bit.sfx.fail();fbErr(el,q);
     // destaca o botão correto
     document.querySelectorAll('.qopt').forEach(function(b){
       if(b.textContent===q.opts[q.ok])b.classList.add('ok');
     });
-    reactToAnswer('#s-quiz .quiz-scene',false);
+    reactToAnswer('#s-quiz .quiz-scene','wrong');
   }
   document.getElementById('quiz-info').textContent=(G.quizIdx+1)+'/10  Acertos: '+G.quizScore;
   // Acerto: mais ágil. Erro: tempo extra para ler a correção destacada.
@@ -974,6 +1044,27 @@ function answerQuiz(isCorrect,btn,q){
 }
 
 function endGame(){G.quizScore>=6?showWin():showLose();}
+
+// Efeito de narração com máquina de escrever (tela de game over)
+function typeText(el,text,speed){
+  el.textContent='';var i=0;
+  var t=setInterval(function(){
+    if(i>=text.length){clearInterval(t);return;}
+    el.textContent+=text.charAt(i++);
+  },speed);
+  return t;
+}
+
+// Derrota por esgotar as vidas durante as fases
+function gameOver(){
+  G.answered=false;
+  Audio8bit.sfx.lose();
+  goTo('s-gameover');
+  document.getElementById('go-msg').innerHTML='Você resistiu até a <span style="color:#ffcc66">Fase '+(G.phase+1)+'</span>, mas o Caos foi mais forte.';
+  var narr='O guardião Aldric tombou. Sem ninguém para restaurar as funções, o Caos Numérico tomou Mathland... os portais ruíram, e a ordem nunca mais retornou ao reino.';
+  if(narrTimer)clearInterval(narrTimer);
+  narrTimer=typeText(document.getElementById('go-narr'),narr,30);
+}
 
 function showWin(){
   Audio8bit.sfx.win();
