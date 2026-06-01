@@ -232,6 +232,21 @@ body{display:flex;align-items:stretch;font-family:'Press Start 2P','Courier New'
 .qopt:hover{background:rgba(60,24,120,.7);border-color:#aa77ff;transform:translateY(-1px);}
 .qopt.ok {background:rgba(0,110,44,.9);border-color:#00ee77;color:#fff;}
 .qopt.err{background:rgba(130,10,10,.9);border-color:#ff3333;color:#fff;}
+.qopt.gone{opacity:.25;pointer-events:none;text-decoration:line-through;filter:grayscale(1);}
+
+/* ── MOEDAS + LOJA DE DICA ── */
+.coins{display:inline-flex;align-items:center;gap:4px;color:#ffd24d;font-size:clamp(6px,.9vw,8px);text-shadow:0 0 8px rgba(255,200,60,.6);white-space:nowrap;}
+.coins.bump{animation:coin-bump .4s ease;}
+@keyframes coin-bump{0%,100%{transform:scale(1);}40%{transform:scale(1.35);}}
+.btn-hint{cursor:pointer;font-family:inherit;margin-top:14px;padding:8px 16px;border-radius:5px;font-size:clamp(6px,.92vw,7.5px);letter-spacing:1px;
+  background:linear-gradient(180deg,#caa028,#8a6010);color:#1e1000;border:2px solid #ffe27a;box-shadow:0 3px 0 #503000;transition:all .12s;}
+.btn-hint:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 5px 0 #503000;}
+.btn-hint:active:not(:disabled){transform:translateY(1px);box-shadow:0 1px 0 #503000;}
+.btn-hint:disabled{opacity:.4;cursor:not-allowed;filter:grayscale(.6);box-shadow:0 3px 0 #503000;}
+.btn-hint.broke{animation:shake .3s;}
+@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-5px);}75%{transform:translateX(5px);}}
+.quiz-tip{margin-top:12px;color:#ffe9a8;font-size:clamp(7px,1vw,8.5px);line-height:1.9;font-style:italic;background:rgba(60,40,0,.45);border:1px solid rgba(255,200,60,.35);border-radius:6px;padding:8px 14px;max-width:90%;display:none;}
+.quiz-tip.show{display:block;}
 
 /* ── WIN / LOSE ── */
 .end-panel-w{background:rgba(2,10,2,.97);border:2px solid #c8a020;border-radius:12px;padding:clamp(22px,4vh,52px) clamp(28px,5vw,64px);text-align:center;max-width:min(620px,86vw);width:100%;box-shadow:0 0 60px rgba(240,200,64,.3),0 0 120px rgba(240,200,64,.08);}
@@ -294,6 +309,8 @@ body{display:flex;align-items:stretch;font-family:'Press Start 2P','Courier New'
         <li>Cada fase ensina um tipo de função matemática</li>
         <li>Leia a <span style="color:#f0c840">dica</span> em itálico antes de responder</li>
         <li>Respostas erradas mostram a explicação completa</li>
+        <li>Cada acerto rende <span style="color:#ffd24d">🪙 10 moedas</span></li>
+        <li>No Quiz Final, gaste <span style="color:#ffd24d">🪙 20</span> para <span style="color:#f0c840">comprar uma dica</span> da questão</li>
         <li>Quiz Final: <span style="color:#f0c840">10 questões sorteadas</span> aleatoriamente</li>
         <li>Precisa de <span style="color:#f0c840">6+ acertos</span> no quiz para vencer!</li>
       </ul>
@@ -317,6 +334,7 @@ body{display:flex;align-items:stretch;font-family:'Press Start 2P','Courier New'
     <div class="phase-bar">
       <div class="phase-lbl" id="phase-lbl">FASE 1</div>
       <div class="prog-wrap">
+        <span class="coins" id="phase-coins">🪙 0</span>
         <span class="prog-lbl">PROGRESSO</span>
         <div class="prog-track"><div class="prog-fill" id="prog-fill"></div></div>
       </div>
@@ -388,7 +406,10 @@ body{display:flex;align-items:stretch;font-family:'Press Start 2P','Courier New'
     <div id="quiz-fb" class="fb"></div>
     <div class="quiz-bar">
       <div class="quiz-ttl">⚔️ QUIZ FINAL — BATALHA DECISIVA</div>
-      <div class="quiz-inf" id="quiz-info">1/10  Acertos: 0</div>
+      <div class="prog-wrap">
+        <span class="coins" id="quiz-coins">🪙 0</span>
+        <div class="quiz-inf" id="quiz-info">1/10  Acertos: 0</div>
+      </div>
     </div>
     <div class="quiz-scene">
       <div class="portal-arch" style="color:#9944cc;">
@@ -420,6 +441,8 @@ body{display:flex;align-items:stretch;font-family:'Press Start 2P','Courier New'
         <div class="quiz-qtx"  id="quiz-qtx"></div>
         <div class="quiz-diag" id="quiz-diag" style="display:none"></div>
         <div class="quiz-opts" id="quiz-opts"></div>
+        <button id="quiz-hint-btn" class="btn-hint" onclick="buyHint()"></button>
+        <div class="quiz-tip" id="quiz-tip"></div>
       </div>
       <div class="scene-char villain">
         <img data-img="3" alt="Caos">
@@ -557,21 +580,25 @@ const PHASES=[
 
 
 const POOL=[
-  {txt:"f(x)=5x+3 de ℝ→ℝ é injetora?",diag:"",opts:["SIM","NÃO"],ok:0,exp:"Sim! Linear com inclinação≠0 é sempre injetora."},
-  {txt:"f(x)=x² de ℝ→ℝ é injetora?",diag:"",opts:["SIM","NÃO"],ok:1,exp:"Não! f(2)=f(−2)=4. Dois elementos têm a mesma imagem."},
-  {txt:"f(x)=x³ de ℝ→ℝ é injetora?",diag:"",opts:["SIM","NÃO"],ok:0,exp:"Sim! x³ é estritamente crescente, portanto injetora."},
-  {txt:"f:ℝ→ℝ⁺, f(x)=x² é sobrejetora?",diag:"contradomínio = reais ≥ 0",opts:["SIM","NÃO"],ok:0,exp:"Sim! Com contradomínio ℝ⁺, todo y≥0 tem preimagem."},
-  {txt:"f:ℝ→ℝ, f(x)=x² é sobrejetora?",diag:"contradomínio = todos os reais",opts:["SIM","NÃO"],ok:1,exp:"Não! Nenhum x satisfaz x²=−1. Negativos não são atingidos."},
-  {txt:"f:ℝ→ℝ, f(x)=4x−7 é sobrejetora?",diag:"",opts:["SIM","NÃO"],ok:0,exp:"Sim! Para qualquer y, x=(y+7)/4 sempre existe em ℝ."},
-  {txt:"f:ℝ→ℝ, f(x)=x³ é bijetora?",diag:"",opts:["SIM","NÃO"],ok:0,exp:"Sim! É injetora e sobrejetora (todo real é atingido)."},
-  {txt:"f:ℝ→ℝ, f(x)=x² é bijetora?",diag:"",opts:["SIM","NÃO"],ok:1,exp:"Não! Não é injetora: f(2)=f(−2)=4."},
-  {txt:"Se f(x)=x² e g(x)=x+1,\nqual é (f∘g)(2)?",diag:"(f∘g)(2)=f(g(2))",opts:["9","5","6","8"],ok:0,exp:"g(2)=3, f(3)=9. Logo (f∘g)(2)=9."},
-  {txt:"Se f(x)=2x e g(x)=x−3,\nqual é (g∘f)(4)?",diag:"(g∘f)(4)=g(f(4))",opts:["5","11","8","2"],ok:0,exp:"f(4)=8, g(8)=5. Logo (g∘f)(4)=5."},
-  {txt:"Se f(x)=x+5 e g(x)=2x,\nqual é (f∘g)(3)?",diag:"(f∘g)(3)=f(g(3))",opts:["11","16","8","10"],ok:0,exp:"g(3)=6, f(6)=11. Logo (f∘g)(3)=11."},
-  {txt:"Se f(x)=3x, qual é f⁻¹(12)?",diag:"f⁻¹(x)=x/3",opts:["4","36","9","3"],ok:0,exp:"f⁻¹(x)=x/3, f⁻¹(12)=4. Verificação: f(4)=12 ✅"},
-  {txt:"Se f(x)=x+8, qual é f⁻¹(3)?",diag:"f⁻¹(x)=x−8",opts:["−5","11","5","−8"],ok:0,exp:"f⁻¹(x)=x−8, f⁻¹(3)=−5. Verificação: f(−5)=3 ✅"},
-  {txt:"Se f(x)=2x+4, qual é f⁻¹(x)?",diag:"",opts:["(x−4)/2","2x−4","x/2+4","(x+4)/2"],ok:0,exp:"y=2x+4 → x=(y−4)/2. Logo f⁻¹(x)=(x−4)/2 ✅"}
+  {txt:"f(x)=5x+3 de ℝ→ℝ é injetora?",diag:"",opts:["SIM","NÃO"],ok:0,exp:"Sim! Linear com inclinação≠0 é sempre injetora.",tip:"Uma reta inclinada passa duas vezes pela mesma altura y?"},
+  {txt:"f(x)=x² de ℝ→ℝ é injetora?",diag:"",opts:["SIM","NÃO"],ok:1,exp:"Não! f(2)=f(−2)=4. Dois elementos têm a mesma imagem.",tip:"Compare f(2) com f(−2). Dão o mesmo valor?"},
+  {txt:"f(x)=x³ de ℝ→ℝ é injetora?",diag:"",opts:["SIM","NÃO"],ok:0,exp:"Sim! x³ é estritamente crescente, portanto injetora.",tip:"x³ é sempre crescente — nunca repete um valor."},
+  {txt:"f:ℝ→ℝ⁺, f(x)=x² é sobrejetora?",diag:"contradomínio = reais ≥ 0",opts:["SIM","NÃO"],ok:0,exp:"Sim! Com contradomínio ℝ⁺, todo y≥0 tem preimagem.",tip:"Aqui o contradomínio só tem números ≥ 0. Todos são atingidos?"},
+  {txt:"f:ℝ→ℝ, f(x)=x² é sobrejetora?",diag:"contradomínio = todos os reais",opts:["SIM","NÃO"],ok:1,exp:"Não! Nenhum x satisfaz x²=−1. Negativos não são atingidos.",tip:"Existe algum x cujo quadrado seja negativo?"},
+  {txt:"f:ℝ→ℝ, f(x)=4x−7 é sobrejetora?",diag:"",opts:["SIM","NÃO"],ok:0,exp:"Sim! Para qualquer y, x=(y+7)/4 sempre existe em ℝ.",tip:"Dá para isolar x em y=4x−7 para qualquer y?"},
+  {txt:"f:ℝ→ℝ, f(x)=x³ é bijetora?",diag:"",opts:["SIM","NÃO"],ok:0,exp:"Sim! É injetora e sobrejetora (todo real é atingido).",tip:"Bijetora = injetora E sobrejetora. x³ cumpre as duas?"},
+  {txt:"f:ℝ→ℝ, f(x)=x² é bijetora?",diag:"",opts:["SIM","NÃO"],ok:1,exp:"Não! Não é injetora: f(2)=f(−2)=4.",tip:"Lembre do teste 2 e −2: se falha a injetora, não é bijetora."},
+  {txt:"Se f(x)=x² e g(x)=x+1,\nqual é (f∘g)(2)?",diag:"(f∘g)(2)=f(g(2))",opts:["9","5","6","8"],ok:0,exp:"g(2)=3, f(3)=9. Logo (f∘g)(2)=9.",tip:"Comece pelo de dentro: calcule g(2), depois eleve ao quadrado."},
+  {txt:"Se f(x)=2x e g(x)=x−3,\nqual é (g∘f)(4)?",diag:"(g∘f)(4)=g(f(4))",opts:["5","11","8","2"],ok:0,exp:"f(4)=8, g(8)=5. Logo (g∘f)(4)=5.",tip:"Aplique f(4) primeiro, depois subtraia 3."},
+  {txt:"Se f(x)=x+5 e g(x)=2x,\nqual é (f∘g)(3)?",diag:"(f∘g)(3)=f(g(3))",opts:["11","16","8","10"],ok:0,exp:"g(3)=6, f(6)=11. Logo (f∘g)(3)=11.",tip:"Primeiro o de dentro: g(3)=2·3, depois some 5."},
+  {txt:"Se f(x)=3x, qual é f⁻¹(12)?",diag:"f⁻¹(x)=x/3",opts:["4","36","9","3"],ok:0,exp:"f⁻¹(x)=x/3, f⁻¹(12)=4. Verificação: f(4)=12 ✅",tip:"A inversa de multiplicar por 3 é dividir por 3."},
+  {txt:"Se f(x)=x+8, qual é f⁻¹(3)?",diag:"f⁻¹(x)=x−8",opts:["−5","11","5","−8"],ok:0,exp:"f⁻¹(x)=x−8, f⁻¹(3)=−5. Verificação: f(−5)=3 ✅",tip:"A inversa de somar 8 é subtrair 8."},
+  {txt:"Se f(x)=2x+4, qual é f⁻¹(x)?",diag:"",opts:["(x−4)/2","2x−4","x/2+4","(x+4)/2"],ok:0,exp:"y=2x+4 → x=(y−4)/2. Logo f⁻¹(x)=(x−4)/2 ✅",tip:"Escreva y=2x+4 e isole x: primeiro subtraia 4, depois divida por 2."}
 ];
+
+// Economia de moedas + loja de dica
+var COIN_PER_HIT=10;   // moedas ganhas por acerto
+var HINT_COST=20;      // custo da dica no quiz
 
 
 var Audio8bit=(function(){
@@ -602,7 +629,10 @@ var Audio8bit=(function(){
     fail:  function(){beep(300,.14,'square',.2,0);beep(220,.28,'square',.2,.15);},
     phase: function(){[523,659,784,1047].forEach(function(f,i){beep(f,.14,'square',.2,i*.11);});},
     win:   function(){[523,659,784,659,784,1047,784,1047].forEach(function(f,i){beep(f,.16,'square',.24,i*.13);});},
-    lose:  function(){[440,415,392,349,330,294].forEach(function(f,i){beep(f,.20,'square',.2,i*.17);}); }
+    lose:  function(){[440,415,392,349,330,294].forEach(function(f,i){beep(f,.20,'square',.2,i*.17);}); },
+    coin:  function(){beep(988,.05,'square',.16,0);beep(1319,.12,'square',.16,.06);},
+    buy:   function(){beep(660,.06,'square',.16,0);beep(880,.06,'square',.16,.07);beep(1175,.14,'square',.16,.14);},
+    nope:  function(){beep(200,.12,'square',.18,0);beep(160,.16,'square',.18,.10);}
   };
   var MEL=[[587,.25],[523,.25],[494,.25],[440,.25],[392,.25],[440,.25],[494,.25],[440,.25],[392,.25],[349,.25],[330,.25],[294,.5],[330,.25],[349,.25],[392,.25],[440,.25],[494,.25],[523,.25],[587,.5],[523,.25],[494,.25],[440,.5],[494,.25],[440,.25],[392,.25],[349,.25],[330,.25],[294,.25],[330,.25],[392,.25],[440,.25],[392,.25],[349,.25],[330,.25],[294,1.0]];
   var BASS=[[147,.5],[147,.5],[196,.5],[196,.5],[147,.5],[147,.5],[110,.5],[110,.5],[147,.5],[165,.5],[196,.5],[196,.5],[196,.5],[147,.5],[147,.5],[147,.5]];
@@ -642,7 +672,7 @@ var Audio8bit=(function(){
 })();
 
 
-var G={phase:0,qIdx:0,dialog:0,dPhase:'intro',phaseScore:0,answered:false,quizQs:[],quizIdx:0,quizScore:0};
+var G={phase:0,qIdx:0,dialog:0,dPhase:'intro',phaseScore:0,answered:false,quizQs:[],quizIdx:0,quizScore:0,coins:0,hintUsed:false};
 var AV={hero:IMG[2],villain:IMG[3]};
 var DEFEAT_MSG=['"Hahaha! Mathland é MINHA para sempre, Aldric!"','"Você falhou, guardião! Só o glorioso CAOS reina agora!"','"Injetora? Bijetora? Palavras vazias para um guerreiro tão fraco!"'];
 
@@ -651,6 +681,42 @@ function goTo(id){document.querySelectorAll('.screen').forEach(function(s){s.cla
 // Embaralhamento uniforme (Fisher-Yates) — substitui o sort(()=>Math.random()-.5) enviesado
 function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
 function drawQuiz(){return shuffle(POOL.slice()).slice(0,10);}
+
+// ── MOEDAS ──
+function updateCoins(){
+  ['phase-coins','quiz-coins'].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.textContent='🪙 '+G.coins;
+  });
+}
+function awardCoins(n){
+  G.coins+=n;updateCoins();Audio8bit.sfx.coin();
+  ['phase-coins','quiz-coins'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el){el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump');}
+  });
+}
+
+// ── LOJA DE DICA (Quiz Final) ──
+function refreshHintBtn(){
+  var btn=document.getElementById('quiz-hint-btn');if(!btn)return;
+  if(G.hintUsed){btn.textContent='💡 Dica revelada';btn.disabled=true;return;}
+  btn.disabled=false;
+  btn.textContent='💡 Comprar dica ('+HINT_COST+' 🪙)';
+}
+function buyHint(){
+  if(G.hintUsed)return;
+  var btn=document.getElementById('quiz-hint-btn');
+  if(G.coins<HINT_COST){
+    Audio8bit.sfx.nope();
+    if(btn){btn.classList.remove('broke');void btn.offsetWidth;btn.classList.add('broke');}
+    return;
+  }
+  G.coins-=HINT_COST;G.hintUsed=true;updateCoins();Audio8bit.sfx.buy();
+  var q=G.quizQs[G.quizIdx];
+  var tipEl=document.getElementById('quiz-tip');
+  if(tipEl){tipEl.textContent='💡 '+(q.tip||'Releia o enunciado com calma.');tipEl.classList.add('show');}
+  refreshHintBtn();
+}
 
 function applyTheme(i){
   var t=PHASE_THEME[i]||PHASE_THEME[0],r=document.documentElement;
@@ -665,7 +731,8 @@ function clearFb(el){el.className='fb';el.textContent='';}
 
 function startGame(){
   Audio8bit.sfx.click();
-  G={phase:0,qIdx:0,dialog:0,dPhase:'intro',phaseScore:0,answered:false,quizQs:[],quizIdx:0,quizScore:0};
+  G={phase:0,qIdx:0,dialog:0,dPhase:'intro',phaseScore:0,answered:false,quizQs:[],quizIdx:0,quizScore:0,coins:0,hintUsed:false};
+  updateCoins();
   openIntro(0);
 }
 
@@ -772,7 +839,7 @@ function loadQ(){
 function answerQ(isCorrect){
   if(G.answered)return;G.answered=true;
   var q=PHASES[G.phase].qs[G.qIdx],el=document.getElementById('phase-fb');
-  if(isCorrect){G.phaseScore++;Audio8bit.sfx.ok();fb(el,'ok',q.exp);}
+  if(isCorrect){G.phaseScore++;Audio8bit.sfx.ok();fb(el,'ok',q.exp+'   +'+COIN_PER_HIT+' 🪙');awardCoins(COIN_PER_HIT);}
   else{Audio8bit.sfx.fail();fb(el,'err',q.exp);}
   setTimeout(function(){
     G.answered=false;G.qIdx++;
@@ -788,6 +855,9 @@ function startQuiz(){
 
 function loadQuizQ(){
   var q=G.quizQs[G.quizIdx];
+  G.hintUsed=false;
+  var tipEl=document.getElementById('quiz-tip');if(tipEl){tipEl.classList.remove('show');tipEl.textContent='';}
+  refreshHintBtn();updateCoins();
   document.getElementById('quiz-info').textContent=(G.quizIdx+1)+'/10  Acertos: '+G.quizScore;
   document.getElementById('quiz-qtx').textContent=q.txt;
   var dEl=document.getElementById('quiz-diag');
@@ -806,8 +876,9 @@ function loadQuizQ(){
 
 function answerQuiz(isCorrect,btn,q){
   document.querySelectorAll('.qopt').forEach(function(b){b.onclick=null;});
+  var hb=document.getElementById('quiz-hint-btn');if(hb)hb.disabled=true;
   var el=document.getElementById('quiz-fb');
-  if(isCorrect){btn.classList.add('ok');G.quizScore++;Audio8bit.sfx.ok();fb(el,'ok',q.exp);}
+  if(isCorrect){btn.classList.add('ok');G.quizScore++;Audio8bit.sfx.ok();fb(el,'ok',q.exp+'   +'+COIN_PER_HIT+' 🪙');awardCoins(COIN_PER_HIT);}
   else{
     btn.classList.add('err');Audio8bit.sfx.fail();fb(el,'err',q.exp);
     // highlight the correct button
@@ -826,7 +897,7 @@ function showWin(){
   var s=G.quizScore,stars=s>=9?'⭐⭐⭐':s>=7?'⭐⭐':'⭐';
   var msg=s>=9?'LENDÁRIO! Aldric selou todos os portais!':'Muito bem! O Caos Numérico foi derrotado!';
   document.getElementById('v-stars').textContent=stars;
-  document.getElementById('v-msg').innerHTML=msg+'<br><br>Fases: '+G.phaseScore+'/'+(PHASES.length*2)+'<br>Quiz: '+s+'/10<br>Total: '+(G.phaseScore+s)+'/'+(PHASES.length*2+10);
+  document.getElementById('v-msg').innerHTML=msg+'<br><br>Fases: '+G.phaseScore+'/'+(PHASES.length*2)+'<br>Quiz: '+s+'/10<br>Total: '+(G.phaseScore+s)+'/'+(PHASES.length*2+10)+'<br>🪙 Moedas: '+G.coins;
   goTo('s-win');
 }
 
