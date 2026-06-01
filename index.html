@@ -145,6 +145,36 @@ body{display:flex;align-items:stretch;font-family:'Press Start 2P','Courier New'
 .char-name.hero   {color:var(--plabel);text-shadow:0 0 4px var(--pc);}
 .char-name.villain{color:#ff7070;text-shadow:0 0 4px rgba(255,80,80,.6);}
 
+/* ── REAÇÕES / AÇÃO ── */
+/* (2 classes = vencem o animation:bob de .scene-char/.villain) */
+.scene-char.fx-attack{animation:fx-attack .5s ease;}
+.scene-char.fx-hit   {animation:fx-hit .5s ease;}
+.scene-char.fx-cheer {animation:fx-cheer .6s ease;}
+.scene-char.fx-hurt  {animation:fx-hurt .5s ease;}
+@keyframes fx-attack{0%{transform:translateX(0)}28%{transform:translateX(34px) scale(1.12)}55%{transform:translateX(-6px)}100%{transform:translateX(0)}}
+@keyframes fx-hit{0%{transform:translateX(0) rotate(0)}18%{transform:translateX(22px) rotate(9deg)}45%{transform:translateX(8px) rotate(-4deg)}100%{transform:translateX(0) rotate(0)}}
+@keyframes fx-cheer{0%,100%{transform:translateY(0) scale(1)}30%{transform:translateY(-18px) scale(1.16)}60%{transform:translateY(0) scale(1.08)}}
+@keyframes fx-hurt{0%{transform:translateX(0) scale(1)}30%{transform:translateX(-16px) scale(.9) rotate(-7deg)}100%{transform:translateX(0) scale(1)}}
+
+/* Flash de tela colorido */
+.fx-flash{position:absolute;inset:0;z-index:25;pointer-events:none;opacity:0;}
+.fx-flash.ok {background:radial-gradient(circle,rgba(0,255,120,.45),transparent 72%);animation:fx-flash-pop .5s ease;}
+.fx-flash.err{background:radial-gradient(circle,rgba(255,45,45,.5),transparent 72%);animation:fx-flash-pop .5s ease;}
+@keyframes fx-flash-pop{0%{opacity:0}18%{opacity:1}100%{opacity:0}}
+
+/* Tremor de tela no erro */
+#game.shake{animation:fx-shake .45s ease;}
+@keyframes fx-shake{0%,100%{transform:translateX(0)}15%{transform:translateX(-11px)}30%{transform:translateX(10px)}45%{transform:translateX(-7px)}60%{transform:translateX(6px)}75%{transform:translateX(-3px)}}
+
+/* Moeda flutuante */
+.coin-float{position:absolute;left:50%;top:42%;transform:translateX(-50%);color:#ffd24d;font-size:clamp(13px,2.2vw,22px);
+  text-shadow:0 0 12px rgba(255,200,60,.9);pointer-events:none;z-index:40;animation:coin-rise 1.1s ease forwards;}
+@keyframes coin-rise{0%{opacity:0;transform:translate(-50%,12px) scale(.6)}22%{opacity:1}100%{opacity:0;transform:translate(-50%,-64px) scale(1.25)}}
+
+/* Destaque de resposta nos botões das fases */
+.btn.ans-ok {background:linear-gradient(180deg,#44cc66,#1d7a3c)!important;border-color:#9fffc0!important;color:#fff!important;box-shadow:0 0 20px rgba(0,238,119,.65),0 4px 0 #0e4422!important;transform:scale(1.05);}
+.btn.ans-err{background:linear-gradient(180deg,#ee4444,#a01515)!important;border-color:#ffb3b3!important;color:#fff!important;box-shadow:0 0 14px rgba(255,60,60,.6),0 4px 0 #661111!important;}
+
 /* PORTAL ARCH BACKDROP */
 .portal-arch{
   position:absolute;top:0;left:50%;transform:translateX(-50%);
@@ -195,7 +225,11 @@ body{display:flex;align-items:stretch;font-family:'Press Start 2P','Courier New'
 /* FEEDBACK */
 .fb{position:absolute;top:0;left:0;right:0;padding:10px 20px;font-size:clamp(6px,.95vw,7.5px);line-height:1.9;text-align:center;z-index:30;display:none;border-bottom:2px solid transparent;}
 .fb.ok {display:block;background:rgba(0,120,50,.97);color:#fff;border-color:#00ee77;}
-.fb.err{display:block;background:rgba(150,12,12,.97);color:#fff;border-color:#ff3333;}
+.fb.err{display:block;background:linear-gradient(180deg,rgba(190,12,12,.98),rgba(120,4,4,.98));color:#fff;border-bottom-width:4px;border-color:#ff3b3b;padding:14px 22px;font-size:clamp(6.5px,1.05vw,8.5px);box-shadow:0 6px 26px rgba(255,0,0,.35);}
+.fb.anim{animation:fb-in .35s ease;}
+@keyframes fb-in{0%{transform:translateY(-100%);opacity:0;}100%{transform:translateY(0);opacity:1;}}
+.fb-head{display:block;font-size:clamp(10px,1.7vw,15px);letter-spacing:1px;margin-bottom:5px;text-shadow:0 0 10px rgba(255,80,80,.7);}
+.fb-correct{display:inline-block;background:rgba(0,0,0,.3);border:1px solid #9fffc0;border-radius:4px;padding:2px 8px;margin-bottom:6px;color:#9fffc0;font-size:clamp(7px,1.1vw,9px);}
 
 /* ── DIALOG ── */
 #s-dlg{justify-content:flex-end;padding:0;}
@@ -267,6 +301,7 @@ body{display:flex;align-items:stretch;font-family:'Press Start 2P','Courier New'
 </head>
 <body>
 <div id="game">
+  <div class="fx-flash" id="fx-flash"></div>
   <div class="bg-stars"></div>
   <div class="bg-moon"></div>
   
@@ -726,7 +761,39 @@ function applyTheme(i){
   if(game)game.style.background='linear-gradient(175deg,'+t.sky1+' 0%,'+t.sky2+' 50%,'+t.sky1+' 100%)';
 }
 
-function fb(el,type,msg){el.className='fb '+type;el.textContent=(type==='ok'?'✅ ':'❌ ')+msg;}
+function fb(el,type,msg){el.className='fb '+type;void el.offsetWidth;el.className='fb '+type+' anim';el.textContent=(type==='ok'?'✅ ':'❌ ')+msg;}
+// Feedback de erro destacado: cabeçalho grande + resposta correta em evidência + explicação
+function fbErr(el,q){
+  el.className='fb err';void el.offsetWidth;el.className='fb err anim';
+  el.innerHTML='<span class="fb-head">❌ ERROU!</span><span class="fb-correct">Correto: '+q.opts[q.ok]+'</span><br>'+q.exp;
+}
+
+// ── EFEITOS DE AÇÃO ──
+function reAnim(el,cls){ if(!el)return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
+  setTimeout(function(){el.classList.remove(cls);},700); }
+function flashScreen(type){
+  var f=document.getElementById('fx-flash');if(!f)return;
+  f.className='fx-flash';void f.offsetWidth;f.className='fx-flash '+type;
+  setTimeout(function(){f.className='fx-flash';},520);
+}
+function shakeScreen(){
+  var g=document.getElementById('game');if(!g)return;
+  g.classList.remove('shake');void g.offsetWidth;g.classList.add('shake');
+  setTimeout(function(){g.classList.remove('shake');},470);
+}
+function floatCoin(sceneSel){
+  var scene=document.querySelector(sceneSel);if(!scene)return;
+  var s=document.createElement('span');s.className='coin-float';s.textContent='+'+COIN_PER_HIT+' 🪙';
+  scene.appendChild(s);setTimeout(function(){s.remove();},1150);
+}
+// reage à resposta no cenário ativo (fase ou quiz)
+function reactToAnswer(sceneSel,correct){
+  var scene=document.querySelector(sceneSel);if(!scene)return;
+  var hero=scene.querySelector('.scene-char:not(.villain)');
+  var vil =scene.querySelector('.scene-char.villain');
+  if(correct){ reAnim(hero,'fx-attack'); reAnim(vil,'fx-hit'); flashScreen('ok'); floatCoin(sceneSel); }
+  else       { reAnim(vil,'fx-cheer');  reAnim(hero,'fx-hurt'); flashScreen('err'); shakeScreen(); }
+}
 function clearFb(el){el.className='fb';el.textContent='';}
 
 function startGame(){
@@ -828,7 +895,8 @@ function loadQ(){
   if(!isBinary) shuffle(indices);
   indices.forEach(function(origIdx,pos){
     var b=document.createElement('button');b.className='btn '+cls[pos];b.textContent=q.opts[origIdx];
-    (function(answerIsCorrect){b.onclick=function(){Audio8bit.sfx.click();answerQ(answerIsCorrect);};})(origIdx===q.ok);
+    b.dataset.correct=(origIdx===q.ok)?'1':'';
+    (function(answerIsCorrect){b.onclick=function(){Audio8bit.sfx.click();answerQ(answerIsCorrect,b);};})(origIdx===q.ok);
     btns.appendChild(b);
   });
   document.getElementById('prog-fill').style.width=Math.round((G.phase*2+G.qIdx)/(PHASES.length*2)*100)+'%';
@@ -836,16 +904,27 @@ function loadQ(){
   goTo('s-phase');
 }
 
-function answerQ(isCorrect){
+function answerQ(isCorrect,btn){
   if(G.answered)return;G.answered=true;
   var q=PHASES[G.phase].qs[G.qIdx],el=document.getElementById('phase-fb');
-  if(isCorrect){G.phaseScore++;Audio8bit.sfx.ok();fb(el,'ok',q.exp+'   +'+COIN_PER_HIT+' 🪙');awardCoins(COIN_PER_HIT);}
-  else{Audio8bit.sfx.fail();fb(el,'err',q.exp);}
+  // trava os botões e destaca a resposta certa (e a errada escolhida)
+  document.querySelectorAll('#q-btns .btn').forEach(function(b){
+    b.onclick=null;
+    if(b.dataset.correct==='1')b.classList.add('ans-ok');
+  });
+  if(isCorrect){
+    G.phaseScore++;Audio8bit.sfx.ok();fb(el,'ok',q.exp+'   +'+COIN_PER_HIT+' 🪙');
+    awardCoins(COIN_PER_HIT);reactToAnswer('#s-phase .phase-scene',true);
+  }else{
+    if(btn)btn.classList.add('ans-err');
+    Audio8bit.sfx.fail();fbErr(el,q);reactToAnswer('#s-phase .phase-scene',false);
+  }
+  // Acerto: avança rápido (mais dinâmico). Erro: mais tempo para ler a correção.
   setTimeout(function(){
     G.answered=false;G.qIdx++;
     if(G.qIdx<PHASES[G.phase].qs.length){loadQ();}
     else{G.dPhase='outro';G.dialog=0;showDlg(PHASES[G.phase].outro[0]);goTo('s-dlg');}
-  },2800);
+  }, isCorrect?1300:3600);
 }
 
 function startQuiz(){
@@ -878,16 +957,20 @@ function answerQuiz(isCorrect,btn,q){
   document.querySelectorAll('.qopt').forEach(function(b){b.onclick=null;});
   var hb=document.getElementById('quiz-hint-btn');if(hb)hb.disabled=true;
   var el=document.getElementById('quiz-fb');
-  if(isCorrect){btn.classList.add('ok');G.quizScore++;Audio8bit.sfx.ok();fb(el,'ok',q.exp+'   +'+COIN_PER_HIT+' 🪙');awardCoins(COIN_PER_HIT);}
-  else{
-    btn.classList.add('err');Audio8bit.sfx.fail();fb(el,'err',q.exp);
-    // highlight the correct button
+  if(isCorrect){
+    btn.classList.add('ok');G.quizScore++;Audio8bit.sfx.ok();fb(el,'ok',q.exp+'   +'+COIN_PER_HIT+' 🪙');
+    awardCoins(COIN_PER_HIT);reactToAnswer('#s-quiz .quiz-scene',true);
+  }else{
+    btn.classList.add('err');Audio8bit.sfx.fail();fbErr(el,q);
+    // destaca o botão correto
     document.querySelectorAll('.qopt').forEach(function(b){
       if(b.textContent===q.opts[q.ok])b.classList.add('ok');
     });
+    reactToAnswer('#s-quiz .quiz-scene',false);
   }
   document.getElementById('quiz-info').textContent=(G.quizIdx+1)+'/10  Acertos: '+G.quizScore;
-  setTimeout(function(){G.quizIdx++;G.quizIdx<10?loadQuizQ():endGame();},2500);
+  // Acerto: mais ágil. Erro: tempo extra para ler a correção destacada.
+  setTimeout(function(){G.quizIdx++;G.quizIdx<10?loadQuizQ():endGame();}, isCorrect?1200:3400);
 }
 
 function endGame(){G.quizScore>=6?showWin():showLose();}
